@@ -2,7 +2,7 @@ import requests
 import json
 import csv
 import re
-
+from pathlib import Path
 
 from bs4 import BeautifulSoup
 
@@ -11,11 +11,20 @@ list_of_urls = [
     site_url + '/collections/all'
 ]
 
+folder = "data"
+
 scraped_data = []
 
 def save_to_csv(data_list, filename):
     keys = data_list[0].keys()
-    with open(filename + '.csv', 'w', newline='') as output_file:
+    #---check & create dir if not exists
+    folder_data = Path.cwd() / folder 
+    print(type(folder_data), folder_data)
+    if not (folder_data).exists():
+        Path.mkdir(folder_data )
+    # folder + '/' + 
+    filename = str(folder_data) + '/' +  filename + '.csv'
+    with open(filename, 'w', newline='') as output_file:
         dict_writer = csv.DictWriter(output_file, keys)
         dict_writer.writeheader()
         dict_writer.writerows(data_list)
@@ -40,7 +49,7 @@ def start_scrape():
                     prev_price = re.findall('\£\d+\.\d+', prev_price_field[0].text)[0]
 
                 pr = re.findall('\£\d+\.\d+', text)
-                print(pr[0])
+                # print(pr[0])
                 scraped_data.append({
                     'name': nm,
                     'price': pr[0],
@@ -52,14 +61,15 @@ def start_scrape():
             next_page = soup.select('a[rel="next"]')
             if len(next_page) > 0:
                 next_page_url = next_page[0]['href']
-                print(( len(next_page) > 0), next_page_url)
+                # print(( len(next_page) > 0), next_page_url)
                 list_of_urls.append(site_url + next_page_url)
-                print(list_of_urls)
+                # print(list_of_urls)
             # print(products, len(products), first_product_nm, first_product_pr, url)
         pass
 
 
 if __name__ == "__main__":
     start_scrape()
-    print(json.dumps(scraped_data), 'total_product:', len(scraped_data))
+    # print(json.dumps(scraped_data))
+    print( 'total_products:', len(scraped_data))
     save_to_csv(scraped_data, 'chocolates')

@@ -71,7 +71,7 @@ class ProductDataPipeline:
             url=scraped_data.get("url", ""),
         )
 
-    # checj
+    # check
     def add_product(self, scraped_data):
         product = self.clean_raw_product(scraped_data)
         if self.is_duplicate(product) == False:
@@ -163,6 +163,6 @@ def start_scrape():
 
 
 if __name__ == "__main__":
-    data_pipeline = ProductDataPipeline(csv_filename="product_data.csv")
+    data_pipeline = ProductDataPipeline(csv_filename="data/product_data.csv")
     start_scrape()
     data_pipeline.close_pipeline()
