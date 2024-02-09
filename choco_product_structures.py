@@ -72,9 +72,10 @@ class ProductDataPipeline:
         )
 
     # check
-    def add_product(self, scraped_data):
+    def add_product(self, scraped_data): #queue based approach here
         product = self.clean_raw_product(scraped_data)
         if self.is_duplicate(product) == False:
+            print(self.storage_queue, len(self.storage_queue))
             self.storage_queue.append(product)
             if (
                 len(self.storage_queue) >= self.storage_queue_limit
@@ -82,7 +83,7 @@ class ProductDataPipeline:
             ):
                 self.save_to_csv()
 
-    def save_to_csv(self):
+    def save_to_csv(self): #buffer similar here
         self.csv_file_open = True
         products_to_save = []
         products_to_save.extend(self.storage_queue)
