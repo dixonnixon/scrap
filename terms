@@ -1,1 +1,39 @@
 speculative loading/Speculating API
+
+The crawler random link doesnt work when the links are disabled with JS turned off:
+    - [1] Change User Agent
+    - [3] Parse URL for another domain level
+    - [2] Change access for previously gathered external URLs and pick one
+
+
+linksExt:
+    - [ ] Scrap only limited count of internal links list
+    - [ ] dive deeper into followExternal function and write comments
+
+Sparse use case Data gathering questions:
+    - roadblock or 'nice to have'
+    - measure the difficult and evaluate the rollback to develop a possible feature
+    - is data redundant
+    - data stored in object should be unique? 
+
+Sparse data gathering true positive:
+    • Is this data sparse or dense? Will it be relevant and populated in every listing, or
+    just a handful out of the set?
+    • How large is the data?
+    • Especially in the case of large data, will I need to regularly retrieve it every time I
+    run my analysis, or only on occasion?
+    • How variable is this type of data? Will I regularly need to add new attributes,
+    modify types (such as fabric patterns, which may be added frequently), or is it set
+    in stone (shoe sizes)?
+
+
+If data is sparse (relatively few products have
+any one of the attributes), and that you may decide to add or remove attributes fre‐
+quently. In this case, it may make sense to create a product type that looks like this:
+• Product title
+• Manufacturer
+• Product ID number (if available/relevant)
+• Attributes (optional list or dictionary)
+And an attribute type that looks like this:
+• Attribute name
+• Attribute value
