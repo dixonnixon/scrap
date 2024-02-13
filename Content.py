@@ -23,15 +23,20 @@ def scrapeNYTimes(url):
 
 def scrapeBrookings(url):
     bs = getPage(url)
+    target_list = []
+    """!!!Find matcing classes"""
     for tag in bs.find_all("div"):
         if tag.has_attr('class'):
-            print(tag.get_attribute_list('class'))
-            print(tag.find("post"))
+            # print("classes",tag.get_attribute_list('class'))
+            classes = tag.get_attribute_list('class')
+            matches = [match for match in classes if "post" in match]
+            if len(matches) > 0:
+                target_list.append(tag)
 
             # print(tag, no_list_soup)
-
-    title = bs.find("h1").text
-    body = bs.find("div", {"class", "post-body"}).text
+    # print(bs.find("h1").parent)
+    title = bs.find("h1").text.strip()
+    body = bs.find("div", {"class", "wysiwyg"}).text.strip()
     return Content(url, title, body)
 
 
