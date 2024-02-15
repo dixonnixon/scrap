@@ -37,3 +37,7 @@ quently. In this case, it may make sense to create a product type that looks lik
 And an attribute type that looks like this:
 • Attribute name
 • Attribute value
+
+
+CWCmodel:
+    - [ ] how to check page loads dynamic or static content?
