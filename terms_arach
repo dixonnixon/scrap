@@ -1,0 +1,48 @@
+- [ ] create spider which will collect only article-type pages
+    and ignore others
+- [ ] moreRules spider is benefitial in the cases when  information from the URL, 
+    or information collected during crawling, impacts
+    the way the page should be parsed
+
+
+save to a file:
+    scrapy runspider articleItems.py -o articles.csv -t csv
+    scrapy runspider articleItems.py -o articles.json -t json
+    scrapy runspider articleItems.py -o articles.xml -t xml
+
+
+Of course, you can use the Item objects yourself and write them to a file or a database
+in whatever way you want, simply by adding the appropriate code to the parsing
+function in the crawler.
+
+Pipleine:
+    - spider collects data
+    - pipline does the heavy lifting of the data processing
+    - let the pipline be Creator
+
+
+**process_item** is a mandatory method for every pipeline class. Scrapy uses this
+method to asynchronously pass Items that are collected by the spider. 
+
+
+:TODO ProductDataPipeline implement with scrapy ------------------->>>>>>>>>>>
+
+
+
+
+Multiple pipelines with different tasks can be declared in the settings.py file. However,
+Scrapy passes all items, regardless of item type, to each pipeline in order. Item-
+specific parsing may be better handled in the spider, before the data hits the pipeline.
+However, if this parsing takes a long time, you may want to consider moving it to the
+pipeline (where it can be processed asynchronously) and adding a check on the item
+type:
+
+def process_item(self, item, spider):
+    if isinstance(item, Article):
+        # Article-specific processing here
+
+
+Which processing to do and where to do it is an important consideration when it
+comes to writing Scrapy projects, especially large one
+
+<<<<<<<<<<<-------------------

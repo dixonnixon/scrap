@@ -19,8 +19,8 @@ class Website:
         self.bodyTag = bodyTag
 
         # print(str(self))
-        print(str(self.name))
-        print(str(self.searchUrl))
+        # print(str(self.name))
+        # print(str(self.searchUrl))
 
     def __repr__(self): 
         return "This is class {}".format(self.bodyTag)

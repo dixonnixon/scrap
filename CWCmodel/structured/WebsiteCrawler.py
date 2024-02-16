@@ -14,12 +14,23 @@ from pathlib import Path
     Using these Content and Website classes you can then write a Crawler to scrape the
     title and content of any URL that is provided for a given web page from a given web
     site
+
+    Crawling over a topics sequentiallu one article topic by one site 
+        and not all articles from the site    
 '''
 
 class Crawler:
+
+    def getStaticUrl(self, url):
+        try:
+            req = requests.get(url)
+        except requests.exceptions.RequestException:
+            return None
+        return BeautifulSoup(req.text, 'html.parser')
+    
     def getPage(self, url): #pretty cool) 
         try:
-            # req = requests.get(url)
+           
             with sync_playwright() as p:
                 browser = p.chromium.launch()
                 page = browser.new_page()
@@ -75,26 +86,26 @@ class Crawler:
         """
         bs = self.getPage(site.searchUrl + topic)
         searchResults = bs.select(site.resultListing)
-        print( len(searchResults))
-        for result in searchResults:
-            print(type(result),   site.resultUrl, '\n\n\n',result.select(site.resultUrl)[0])
-            url = result.select(site.resultUrl)[0].attrs["href"]
-            # Check to see whether it's a relative or an absolute URL
+        # print('search', len(searchResults))
+        for num, result in enumerate(searchResults):
+            url = result.select(site.resultUrl)[num].attrs["href"]
+            # print(type(result),   site.resultUrl, '\n\n\n', result.select(site.resultUrl)[0],
+            #     url)
+            # # Check to see whether it's a relative or an absolute URL
             if(site.absoluteUrl):
-                bs = self.getPage(url)
+                bs = self.getStaticUrl(url)
             else:
-                bs = self.getPage(site.url + url)
+                bs = self.getStaticUrl(site.url + url)
 
             if bs is None:
                 print("Something was wrong with that page or URL. Skipping!")
                 return
             
-            print(
-                'here'
-            )
+          
             title = self.safeGet(bs, site.titleTag)
+            
             body = self.safeGet(bs, site.bodyTag)
-            print(body, title)
+            # print(body, title)
             
             if title != '' and body != '':
                 content = Content(topic, title, body, url)
@@ -108,7 +119,7 @@ siteData = [
     ['O\'Reilly Media', 'http://oreilly.com',
         # 'https://www.oreilly.com/search/?q=','article.product-result',
         'https://www.oreilly.com/search/?q=','div#search-main-content >  section',
-        'article a', True, 'h3', 'section#product-description'],
+        'article a', True, 'h3', 'div.content > span'],
     ['Reuters', 'http://reuters.com',
         'http://www.reuters.com/search/news?blob=',
         'div.search-result-content','h3.search-result-title a',

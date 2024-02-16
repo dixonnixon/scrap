@@ -41,3 +41,16 @@ And an attribute type that looks like this:
 
 CWCmodel:
     - [ ] how to check page loads dynamic or static content?
+    - [ ] finish the crawler example for all 3 websites
+    - [ ] addition to example: make it to crawl through interval
+            with 10 links fetched from 1 resource -> pause 1 minute in a loop
+            :implementation details
+                - use asyncio
+
+
+________________________________________________
+Storing
+
+API -> db
+collect documents & save -> stream
+alerts & aggregate -> email

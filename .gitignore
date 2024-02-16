@@ -3,6 +3,12 @@ lib/
 lib64
 share/
 include/
-
+CWCmodel/__pycache__/
+CWCmodel/data/
 data/
 *.cfg
+
+CWCmodel/structured/__pycache__/content.cpython-310.pyc
+CWCmodel/structured/__pycache__/website.cpython-310.pyc
+CWCmodel/pattern/__pycache__/website.cpython-310.pyc
+CWCmodel/pattern/__pycache__/content.cpython-310.pyc
