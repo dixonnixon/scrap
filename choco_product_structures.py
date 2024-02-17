@@ -4,6 +4,8 @@ import csv
 import requests
 from bs4 import BeautifulSoup
 import time
+from pathlib import Path
+
 
 
 #:TODO fetch currency & cache for each currency in use for convert_ methods
@@ -13,6 +15,7 @@ import time
 
 @dataclass
 class Product:
+    num: str = ""
     name: str = ""
     price_string: InitVar[str] = ""
     price_gb: float = field(init=False)
@@ -23,9 +26,10 @@ class Product:
     def __post_init__(self, price_string):
         self.name = self.clean_name()
         self.price_gb = self.clean_price(price_string)
-        self.price_ua = self.clean_price(price_string)
+        self.price_ua = self.convert_price_to_ua()
         self.price_usd = self.convert_price_to_usd()
         self.url = self.create_absolute_url()
+
 
     def clean_price(self, price_string):
         price_string = price_string.strip()
@@ -63,16 +67,71 @@ class ProductDataPipeline:
         self.storage_queue_limit = storage_queue_limit #This variable defines the maximum number of products that can reside in the storage_queue
         self.csv_filename = csv_filename #This variable stores the name of the CSV file used for product data storage.
         self.csv_file_open = False #This boolean variable tracks whether the CSV file is currently open or closed.
+        # self.check_file()
+        self.processed = 0
+        
+        self.folder_data = Path.cwd() / 'data' 
+        self.filename = str(self.folder_data) + '/' +  self.csv_filename 
+
+
+    def check_file(self):
+        print("fields")
+        if not (self.folder_data).exists():
+            Path.mkdir(self.folder_data)
+
+
+        self.csv_file_open = True
+
+        file_exists = (
+            os.path.isfile(self.filename) and os.path.getsize(self.filename)
+        )
+        print(file_exists)
+        keys = []
+        keys.extend([f.name for f in fields(Product)])
+        with open(self.filename, mode='w', newline='', encoding='utf-8') as output_file:
+            writer = csv.DictWriter(output_file, fieldnames = keys)
+
+            writer.writeheader()
+
+        self.csv_file_open = False
+
+    def write_footer(self, fields_, offset=1):
+        
+        self.csv_file_open = True
+        
+        total = [''] * len(fields(Product))
+        for n, val in enumerate(fields_):
+            print(n, val)
+            total[n] = val
+
+
+        total.extend([self.processed])
+        # print(total)
+        with open(self.filename, mode='a', newline='', encoding='utf-8') as output_file:
+            writer = csv.writer(output_file)
+            #insert empty offset row
+            n = 0
+            while n < offset:
+                writer.writerow([''] * len(fields(Product)))
+                n+=1
+            writer.writerow(total)
+
+        self.csv_file_open = False
+
+
 
     def clean_raw_product(self, scraped_data):
+        
         return Product(
+            num=scraped_data.get("num",""),
             name=scraped_data.get("name", ""),
             price_string=scraped_data.get("price", ""),
             url=scraped_data.get("url", ""),
         )
 
     # check
-    def add_product(self, scraped_data): #queue based approach here
+    def add_product(self, num, scraped_data): #queue based approach here
+        scraped_data["num"] = num 
         product = self.clean_raw_product(scraped_data)
         if self.is_duplicate(product) == False:
             print(self.storage_queue, len(self.storage_queue))
@@ -84,6 +143,12 @@ class ProductDataPipeline:
                 self.save_to_csv()
 
     def save_to_csv(self): #buffer similar here
+        folder_data = Path.cwd() / 'data' 
+        # if not (folder_data).exists():
+        #     Path.mkdir(folder_data )
+
+        filename = str(folder_data) + '/' +  self.csv_filename 
+
         self.csv_file_open = True
         products_to_save = []
         products_to_save.extend(self.storage_queue)
@@ -91,17 +156,23 @@ class ProductDataPipeline:
         if not products_to_save:
             return
         keys = [field.name for field in fields(products_to_save[0])]
-        file_exists = (
-            os.path.isfile(self.csv_filename) and os.path.getsize(self.csv_filename)
-        )
+        print('keys ', keys)
+        # file_exists = (
+        #     os.path.isfile(filename) and os.path.getsize(filename)
+        # )
+        # print('\n',file_exists,'\n')
 
-        with open(self.csv_filename, mode='a', newline='', encoding='utf-8') as output_file:
+        # with open(filename, mode='a' if file_exists else 'w', newline='', encoding='utf-8') as output_file:
+        with open(filename, mode='a', newline='', encoding='utf-8') as output_file:
             writer = csv.DictWriter(output_file, fieldnames = keys)
 
-            if not file_exists:
-                writer.writeheader()
+            # if not file_exists:
+            #     writer.writeheader()
             for product in products_to_save:
+                # product['num'] = self.processed
+                
                 writer.writerow(asdict(product))
+                self.processed += 1
         self.csv_file_open = False
 
     def is_duplicate(self, product_data):
@@ -112,10 +183,14 @@ class ProductDataPipeline:
         return False
     
     def close_pipeline(self):
+
         if self.csv_file_open:
-            time.sleep(3)
+            time.sleep(1)
         if len(self.storage_queue) > 0:
             self.save_to_csv()
+
+        self.write_footer(['Total', '', 'total_price_gb'], 1)
+
     
 
 
@@ -130,6 +205,8 @@ def start_scrape():
 
     # Loop Through List of URLs
 
+    data_pipeline.check_file()
+    counter = 1
     for url in list_of_urls:
 
         # Send Request
@@ -139,10 +216,12 @@ def start_scrape():
         if response.status_code == 200:
 
             # Parse Data
+            time.sleep(2)
 
             soup = BeautifulSoup(response.content, "html.parser")
             products = soup.select("product-item")
-            for product in products:
+
+            for n, product in enumerate(products):
                 name = product.select("a.product-item-meta__title")[0].get_text()
                 price = (
                     product.select("span.price")[0]
@@ -152,18 +231,21 @@ def start_scrape():
                 url = product.select("div.product-item-meta a")[0]["href"]
 
                 # Add To Data Pipeline
-
-                data_pipeline.add_product({"name": name, "price": price, "url": url})
+                print('prod num', n)
+                data_pipeline.add_product(counter, {"name": name, "price": price, "url": url})
+                counter += 1
             # Next Page
 
             next_page = soup.select('a[rel="next"]')
+            print('\n\n\nnext page = ', next_page)
             if len(next_page) > 0:
                 list_of_urls.append(
                     "https://www.chocolate.co.uk" + next_page[0]["href"]
                 )
+    print(data_pipeline.processed)
 
 
 if __name__ == "__main__":
-    data_pipeline = ProductDataPipeline(csv_filename="data/product_data.csv")
+    data_pipeline = ProductDataPipeline(csv_filename="product_data.csv")
     start_scrape()
     data_pipeline.close_pipeline()

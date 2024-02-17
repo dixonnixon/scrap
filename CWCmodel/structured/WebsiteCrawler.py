@@ -15,7 +15,7 @@ from pathlib import Path
     title and content of any URL that is provided for a given web page from a given web
     site
 
-    Crawling over a topics sequentiallu one article topic by one site 
+    Crawling over a topics sequentially one article topic by one site 
         and not all articles from the site    
 '''
 
