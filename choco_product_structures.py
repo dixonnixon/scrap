@@ -5,13 +5,180 @@ import requests
 from bs4 import BeautifulSoup
 import time
 from pathlib import Path
+import json
+import functools
 
+from abc import ABC, abstractmethod
+import abc
 
+class DataStorage(ABC):
+    @abstractmethod
+    def read(self, key):
+        pass
+    @abstractmethod
+    def write(self, key, value):
+        pass
+    
 
 #:TODO fetch currency & cache for each currency in use for convert_ methods
 #:TODO pass from config or on init the "missing" string in a way that it could be changed
 #:TODO pass base url "https://www.chocolate.co.uk" externally of the Data class
+#:TODO decouple data access logic by storage type: db, file
+    
 
+# Concrete subclass for database storage
+class DatabaseStorage(DataStorage):
+    def __init__(self):
+        # Simulate a database connection
+        self.database = {}
+    def read(self, key):
+        if key in self.database:
+            return self.database[key]
+        else:
+            return None
+    def write(self, key, value):
+        self.database[key] = value
+        print(f"Writing to the database: {key} -> {value}")
+
+STORAGES = {}
+FILE_PARSERS = {}
+
+
+def register_parser(f):
+    @functools.wraps(f)
+    def decorator(*args, **kwargs):
+        # Do something before
+        print(f, args[0], kwargs)
+        # value = f(*args, **kwargs)
+        FILE_PARSERS[f] = args[0]
+        # # Do something after
+        return args
+    return decorator
+
+def register_storage(storage_type):
+    def decorator(fn):
+        # print(fn, fn.__name__, storage_type)
+        STORAGES[storage_type] = fn
+        return fn
+    return decorator
+
+@register_parser('json_parser')
+class json_parser:
+    def __init__(self, filename, keys):
+
+        self.filename = filename
+        self.keys = keys
+        try:
+            with open(self.filename, mode="r", encoding="utf-8") as output_file:
+                self.data = json.load(output_file)
+        except FileNotFoundError:
+            self.data= []
+
+        print('\n\n\n\nexisting_data', len(self.data), self.data)
+        
+
+
+    def write(self, num, obj):
+        # self.data.append(obj)
+        # self.data.extend(obj)
+        print()
+        if not self.data.__contains__(obj): 
+            
+            self.data.append(obj)
+            with open(self.filename, mode="w", encoding="utf-8") as output_file:
+                json.dump(self.data, output_file, indent=2)
+
+
+    def initialize(self):
+        if len(self.data) == 0:
+            with open(self.filename, mode="w", encoding="utf-8") as output_file:
+                json.dump([], output_file, indent=2)
+
+    
+
+@register_parser('csv_parser')
+class csv_parser():
+    def __init__(self, filename, keys):
+        
+
+        self.filename = filename
+        self.keys = keys
+
+    def initialize(self):
+        with open(self.filename, mode='w', newline='', encoding='utf-8') as output_file:
+            writer = csv.DictWriter(output_file, fieldnames = self.keys )
+            writer.writeheader()
+
+
+    def write(self, num, obj):
+        with open(self.filename, mode='a', newline='', encoding='utf-8') as output_file:
+            writer = csv.DictWriter(output_file, fieldnames = self.keys)
+            writer.writerow(obj)
+        # print(self.filename, num, obj, self.keys)
+
+# @register_parser('json')
+
+
+@register_storage('database')
+def database_storage(keys):
+    un = ''
+    pasw = ''
+    cn_string = ''
+    return DatabaseStorage()
+
+@register_storage('file')
+def file_storage(filename, extention, keys, filetype='text'):
+    #config filestorage here
+    return FileSystemStorage(filetype, filename, extention, keys)
+
+def get_storage(storage_type):
+    if storage_type not in STORAGES:
+        raise ValueError(f"Unsupported storage type: {storage_type}")
+    return STORAGES[storage_type]
+
+def get_file_parser(file_type):
+    print(FILE_PARSERS)
+    if file_type not in FILE_PARSERS:
+        raise ValueError(f"Unsupported file type: {file_type}")
+    return FILE_PARSERS[file_type]
+
+# Concrete subclass for file system storage
+class FileSystemStorage(DataStorage):
+    def __init__(self, filetype, filename, extention, keys):
+        # Simulate a file system
+        # self.file = {}
+        self.folder_data = Path.cwd() / 'data' 
+        self.file_open = False
+        self.filename = str(self.folder_data) + filename  + '.' + extention
+        self.filetype = filetype
+        print('filename', self.filename)
+        self.keys = keys
+
+        if not (self.folder_data).exists():
+            Path.mkdir(self.folder_data)
+
+        file_exists = (
+            os.path.isfile(self.filename) and os.path.getsize(self.filename)
+        )
+
+        self.file_parser = get_file_parser(extention + '_parser')(self.filename, self.keys)
+
+        # if not file_exists:
+        self.file_open = True
+        self.file_parser.initialize()
+        self.file_open = False
+        
+    def ready(self):
+        return not self.file_open
+
+    def read(self, key):
+        key
+
+    def write(self, key, value):
+        self.file_open = True
+        self.file_parser.write(key, value)
+        print(f"Writing to the file system: {key} -> {value}")
+        self.file_open = False
 
 @dataclass
 class Product:
@@ -61,39 +228,30 @@ class Product:
     
 
 class ProductDataPipeline:
-    def __init__(self, csv_filename="", storage_queue_limit=5): #:TODO Why 5?????(?) explain
+    def __init__(self, storageType, storage_queue_limit=5): #:TODO Why 5?????(?) explain -> 5 temporary cells in queue
         self.names_seen = [] #This list is used for checking duplicates.
         self.storage_queue = [] #This queue holds products temporarily until a specified storage limit is reached.
         self.storage_queue_limit = storage_queue_limit #This variable defines the maximum number of products that can reside in the storage_queue
-        self.csv_filename = csv_filename #This variable stores the name of the CSV file used for product data storage.
-        self.csv_file_open = False #This boolean variable tracks whether the CSV file is currently open or closed.
-        # self.check_file()
-        self.processed = 0
-        
-        self.folder_data = Path.cwd() / 'data' 
-        self.filename = str(self.folder_data) + '/' +  self.csv_filename 
 
+        self.processed = 0 #row product counter
 
-    def check_file(self):
-        print("fields")
-        if not (self.folder_data).exists():
-            Path.mkdir(self.folder_data)
-
-
-        self.csv_file_open = True
-
-        file_exists = (
-            os.path.isfile(self.filename) and os.path.getsize(self.filename)
-        )
-        print(file_exists)
         keys = []
         keys.extend([f.name for f in fields(Product)])
-        with open(self.filename, mode='w', newline='', encoding='utf-8') as output_file:
-            writer = csv.DictWriter(output_file, fieldnames = keys)
+        
+        #setting up storage
+        match storageType:
+            case "database":
+                self.storage = get_storage('database')()
 
-            writer.writeheader()
+            case "file":
+                filename="product_data"
+                self.storage =  get_storage('file')('/' +  filename, 'csv',  keys)
+            case _:
+                print('No type  {self.storage} Storage allowed')
 
-        self.csv_file_open = False
+
+    def initialize(self):
+        print("fields")
 
     def write_footer(self, fields_, offset=1):
         
@@ -101,13 +259,10 @@ class ProductDataPipeline:
         
         total = [''] * len(fields(Product))
         for n, val in enumerate(fields_):
-            print(n, val)
             total[n] = val
 
-
-        total.extend([self.processed])
-        # print(total)
-        with open(self.filename, mode='a', newline='', encoding='utf-8') as output_file:
+        total[-1]= self.processed
+        with open(self.csv_filename, mode='a', newline='', encoding='utf-8') as output_file:
             writer = csv.writer(output_file)
             #insert empty offset row
             n = 0
@@ -134,46 +289,29 @@ class ProductDataPipeline:
         scraped_data["num"] = num 
         product = self.clean_raw_product(scraped_data)
         if self.is_duplicate(product) == False:
-            print(self.storage_queue, len(self.storage_queue))
+            # print(self.storage_queue, len(self.storage_queue))
             self.storage_queue.append(product)
             if (
                 len(self.storage_queue) >= self.storage_queue_limit
-                and self.csv_file_open == False
+                                # and self.csv_file_open == False
+                and self.storage.ready()
             ):
-                self.save_to_csv()
+                self.save()
 
-    def save_to_csv(self): #buffer similar here
-        folder_data = Path.cwd() / 'data' 
-        # if not (folder_data).exists():
-        #     Path.mkdir(folder_data )
-
-        filename = str(folder_data) + '/' +  self.csv_filename 
-
-        self.csv_file_open = True
+    def save(self): #buffer similar here
+   
         products_to_save = []
         products_to_save.extend(self.storage_queue)
+        # self.save_to_json()
+
         self.storage_queue.clear()
         if not products_to_save:
             return
-        keys = [field.name for field in fields(products_to_save[0])]
-        print('keys ', keys)
-        # file_exists = (
-        #     os.path.isfile(filename) and os.path.getsize(filename)
-        # )
-        # print('\n',file_exists,'\n')
+        
+        for product in products_to_save:
+            self.storage.write(product.num, asdict(product))
+            self.processed += 1
 
-        # with open(filename, mode='a' if file_exists else 'w', newline='', encoding='utf-8') as output_file:
-        with open(filename, mode='a', newline='', encoding='utf-8') as output_file:
-            writer = csv.DictWriter(output_file, fieldnames = keys)
-
-            # if not file_exists:
-            #     writer.writeheader()
-            for product in products_to_save:
-                # product['num'] = self.processed
-                
-                writer.writerow(asdict(product))
-                self.processed += 1
-        self.csv_file_open = False
 
     def is_duplicate(self, product_data):
         if product_data.name in self.names_seen:
@@ -183,13 +321,14 @@ class ProductDataPipeline:
         return False
     
     def close_pipeline(self):
-
-        if self.csv_file_open:
+        if self.storage.ready():
             time.sleep(1)
         if len(self.storage_queue) > 0:
-            self.save_to_csv()
+            self.save()
+            # self.save_to_json()
 
-        self.write_footer(['Total', '', 'total_price_gb'], 1)
+        #:TODO implement calculate avarage on the different prices columns
+        # self.write_footer(['Total', '', ''], 1)
 
     
 
@@ -205,7 +344,7 @@ def start_scrape():
 
     # Loop Through List of URLs
 
-    data_pipeline.check_file()
+    data_pipeline.initialize()
     counter = 1
     for url in list_of_urls:
 
@@ -216,7 +355,7 @@ def start_scrape():
         if response.status_code == 200:
 
             # Parse Data
-            time.sleep(2)
+            time.sleep(1)
 
             soup = BeautifulSoup(response.content, "html.parser")
             products = soup.select("product-item")
@@ -231,7 +370,7 @@ def start_scrape():
                 url = product.select("div.product-item-meta a")[0]["href"]
 
                 # Add To Data Pipeline
-                print('prod num', n)
+                # print('prod num', n)
                 data_pipeline.add_product(counter, {"name": name, "price": price, "url": url})
                 counter += 1
             # Next Page
@@ -246,6 +385,6 @@ def start_scrape():
 
 
 if __name__ == "__main__":
-    data_pipeline = ProductDataPipeline(csv_filename="product_data.csv")
+    data_pipeline = ProductDataPipeline(storageType='file')
     start_scrape()
     data_pipeline.close_pipeline()
