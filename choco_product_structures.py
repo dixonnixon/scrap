@@ -11,6 +11,47 @@ import functools
 from abc import ABC, abstractmethod
 import abc
 
+
+# def apply_product_rules(product):
+#     # Implement your specific rules here
+#     # For example, check product validity, format data, etc.
+#     # Modify the product object directly based on the rules
+#     # ...
+
+#     # Return the modified product
+#     return product
+
+# class ProductService:
+#     def __init__(self, parser, storage):
+#         self.parser = parser
+#         self.storage = storage
+
+#     def process_data(self, data):
+#         parsed_data = self.parser.parse(data)
+#         self.storage.save(parsed_data)
+
+
+# class DataProvider:
+#     def __init__(self, data_adapter):
+#         self.data_adapter = data_adapter
+
+#     def read_data(self):
+#         return self.data_adapter.read_data()
+
+#     def store_data(self, data):
+#         self.data_adapter.store_data(data)
+
+# class ProductDataAdapter:
+#     # Implement data handling specific to product data
+
+# class DetailDataAdapter:
+#     # ... (similar for detail data)
+
+# class AssemblyDataAdapter:
+#     # ... (similar for assembled product data)
+
+
+
 class DataStorage(ABC):
     @abstractmethod
     def read(self, key):
@@ -371,6 +412,7 @@ def start_scrape():
 
                 # Add To Data Pipeline
                 # print('prod num', n)
+                # product = apply_product_rules(product)
                 data_pipeline.add_product(counter, {"name": name, "price": price, "url": url})
                 counter += 1
             # Next Page
