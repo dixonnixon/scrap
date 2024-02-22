@@ -5,6 +5,7 @@ from website import Website
 from playwright.sync_api import sync_playwright
 from pathlib import Path
 
+#Tested, async with playwrite sometimes works unappropriate
 
 '''
     use single string CSS selector for each piece of info
@@ -16,7 +17,28 @@ from pathlib import Path
     site
 
     Crawling over a topics sequentially one article topic by one site 
-        and not all articles from the site    
+        and not all articles from the site    ***********************************
+
+        This script loops through all the topics in the topics list and announces before it
+            starts scraping for a topic:
+            GETTING INFO ABOUT python
+
+            Then it loops through all of the sites in the sites list and crawls each particular site
+            for each particular topic. Each time that it successfully scrapes information about a
+            page, it prints it to the console:
+
+            New article found for topic: python
+            URL: http://example.com/examplepage.html
+            TITLE: Page Title Here
+            BODY: Body content is here
+
+    *** crowling all topics from a websites sequently: 
+        1 topic from 1st website 
+        1 topic 2nd website ... 1 .. n
+        2 topic from n website ... k .. n
+        _____after k requests make pause 1-3 minutes
+        to avoid overflow a web server
+
 '''
 
 class Crawler:
@@ -82,7 +104,7 @@ class Crawler:
     #         content.print()
     def search(self, topic, site):
         """
-        Searches a given website for a given topic and records all pages found
+        Searches a given website for a given topic and prints/writes_somewhere all pages found
         """
         bs = self.getPage(site.searchUrl + topic)
         searchResults = bs.select(site.resultListing)

@@ -17,6 +17,25 @@ allExtLinks = set()
 allIntLinks = set()
 internalLimit = 0
 
+"""
+The example from the book supplemented by my own view which
+    has several functions:
+    followExternalOnly(current_page) - begins the outer loop for continuesly runs:
+        heckHeader() - function check availability
+        getRandomExternalLink(current_page) - runs the internal loop for and behavior with some condiitons:
+            getExternalLinks(current_page) - gathering external links of a page
+            getInternalLinks(current_page) - gathering external links of a page
+
+    
+
+    :condiitons - if no external link follow the internal and try to gather external links
+
+    getAllExternalLinks(link) - scrape the page, collect unique internal and external links, then
+        follow the first internal link to collect urls from this page
+        getInternalLinks(link)
+        getInternalLinks(link)
+"""
+
 
 #Retrieves a list of all Internal links found on a page
 def getInternalLinks(bs, includeUrl):
@@ -122,7 +141,7 @@ def getAllExternalLinks(siteUrl):
     '''Getting external links from target web resource'''
     html = urlopen(siteUrl)
     domain = '{}://{}'.format(urlparse(siteUrl).scheme,
-    urlparse(siteUrl).netloc)
+        urlparse(siteUrl).netloc)
     bs = BeautifulSoup(html, 'html.parser')
     internalLinks = getInternalLinks(bs, domain) #^/
     externalLinks = getExternalLinks(bs, domain) #^http|www

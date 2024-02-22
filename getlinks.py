@@ -6,12 +6,14 @@ pages = set()
 invalid = set()
 
 def getLinks(pageUrl):
+    """
+    scraping function which scrape all internal wikipedia links
+    """
     global pages
     url = 'http://en.wikipedia.org{}'.format(pageUrl)
     try:
         html = urlopen(url)
     except:
-        print("sd")
         html = ''
         invalid.add(url)
     bs = BeautifulSoup(html, 'html.parser')

@@ -9,18 +9,12 @@ import asyncio
 
 import re
 
+#not tested but should work
 
 '''
-    use single string CSS selector for each piece of info
-    and put it in a dict...
-
-
-    Using these Content and Website classes you can then write a Crawler to scrape the
-    title and content of any URL that is provided for a given web page from a given web
-    site
-
-    Crawling over a topics sequentiallu one article topic by one site 
-        and not all articles from the site    
+    This type of crawler works well for projects when you want to gather all the data from
+        a site—not just data from a specific search result or page listing. It also works well
+        when the site`s pages may be disorganized or widely dispersed.
 '''
 
 class Crawler:
