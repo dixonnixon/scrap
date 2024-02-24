@@ -5,6 +5,13 @@ import base64
 from playwright.sync_api import sync_playwright
 from pathlib import Path
 import webvtt
+from dotenv import load_dotenv
+
+
+import os
+import json
+
+load_dotenv()
 
 # from requests_html import AsyncHTMLSession
 # import asyncio
@@ -94,80 +101,67 @@ def getTextTrackUri(video_id):
 # if token:
 #   print(token)
 
-
-get_track = with_token(getToken("719a17658560fd1305db6f452897b8ad9661e228",
-  "NUDOOuCpGE+eOqdXQfkrb1Ea4v5i3Yrhs3pqX0HH375GAX3gcVsoG0VkUXxcSUQej0zMQMzOCqxCA2iO8KYQo4lekMh49sqhzSzMulFMa/hfMyZiDDb/cpffPSkHq1e1"
+get_track = with_token(getToken(
+  os.getenv('VIMEO_CLIENT_ID'),
+  os.getenv('VIMEO_CLIENT_SECRET')
 ))
 
 print(get_track(915051800))
 
-def handle_request(req):
-  print( '\n\n\n', "a request was made:", req, type(req))
-  response = req.response()
-  if response.ok:
-    print("Response body was ", response, '\n\n\n')
-  # if req.status_code == 200:
-  #   print('\n\n\n-----------------\n\n\n')
+def getTextfromVideo():
+  #try load dynamic
+  target_link = None
+
+  with sync_playwright() as p:
+    browser = p.chromium.launch()
+    context = browser.new_context()
+    page = context.new_page()
+    # page.goto('http://pythonscraping.com/pages/javascript/redirectDemo1.html')
+    page.goto('https://vimeo.com/915051800/baf3fdcde5')
+    # page.goto('https://vimeo.com/bestoftheyear')
+    # print(page.wait_for_load_state())
+    page.wait_for_load_state()
+    page.wait_for_timeout(8000)
+    # page.on("load", load_tracker)
+    # page.on('request', handle_request)
+    page.wait_for_timeout(8000)
     
-def load_tracker(a):
-  print('\n\n\n*****************', a, '************\n\n\n')
-  
-  # print(track)
+    html = page.content()
+    bs = BeautifulSoup(html, 'html.parser')
+    track = bs.select("track")
+    target_link = "https://vimeo.com" + track[0]['src']
+    print(track[0]['src'])
+    
 
+    # sometime later...
+    page.wait_for_timeout(8000)
+    # page.remove_listener("request", handle_request)
+    # page.remove_listener("request", load_tracker)
+    browser.close()
 
-#try load dynamic
-target_link = None
+  if target_link:
+    headers = {
+      "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 7_1_2 like Mac OS X) \
+          AppleWebKit/537.51.2 (KHTML, like Gecko) Version/7.0 Mobile/11D257 \
+          Safari/9537.53"
+    }
 
-with sync_playwright() as p:
-  browser = p.chromium.launch()
-  context = browser.new_context()
-  page = context.new_page()
-  # page.goto('http://pythonscraping.com/pages/javascript/redirectDemo1.html')
-  page.goto('https://vimeo.com/915051800/baf3fdcde5')
-  # page.goto('https://vimeo.com/bestoftheyear')
-  # print(page.wait_for_load_state())
-  page.wait_for_load_state()
-  page.wait_for_timeout(8000)
-  # page.on("load", load_tracker)
-  # page.on('request', handle_request)
-  page.wait_for_timeout(8000)
-  
-  html = page.content()
-  bs = BeautifulSoup(html, 'html.parser')
-  track = bs.select("track")
-  target_link = "https://vimeo.com" + track[0]['src']
-  print(track[0]['src'])
-  
+    print('requesting ', target_link)
+    try:
+      req = requests.get(target_link, headers=headers)
+    except requests.exceptions.RequestException as e:
+      print(e)
 
-  # sometime later...
-  page.wait_for_timeout(8000)
-  # page.remove_listener("request", handle_request)
-  # page.remove_listener("request", load_tracker)
-  browser.close()
+    with open(str(Path.cwd()) + "/text.vtt", "w") as file1:
+      # Writing data to a file
+      file1.write(req.text)
 
-if target_link:
-  headers = {
-    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 7_1_2 like Mac OS X) \
-        AppleWebKit/537.51.2 (KHTML, like Gecko) Version/7.0 Mobile/11D257 \
-        Safari/9537.53"
-  }
+    out_text = ""
+    for caption in webvtt.read(str(Path.cwd()) + "/text.vtt"):
+      out_text += caption.text
+      print(caption.text)
 
-  print('requesting ', target_link)
-  try:
-    req = requests.get(target_link, headers=headers)
-  except requests.exceptions.RequestException as e:
-    print(e)
-
-  with open(str(Path.cwd()) + "/text.vtt", "w") as file1:
-    # Writing data to a file
-    file1.write(req.text)
-
-  out_text = ""
-  for caption in webvtt.read(str(Path.cwd()) + "/text.vtt"):
-    out_text += caption.text
-    print(caption.text)
-
-  with open(str(Path.cwd()) + "/text.txt", "w") as file2:
-    # Writing data to a file
-    file2.write(out_text)
+    with open(str(Path.cwd()) + "/text.txt", "w") as file2:
+      # Writing data to a file
+      file2.write(out_text)
 
