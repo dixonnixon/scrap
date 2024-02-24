@@ -15,6 +15,7 @@ import webvtt
 # Access token URL: https://api.vimeo.com/oauth/access_token
 # token: e64ec5b8403d282a1c29f896ac958c96
 
+# [ ] make an IP call to check if titles in a video 
 
 # r = requests.get('https://vimeo.com/915051800/baf3fdcde5')  # replace '<URL>' with the URL of the webpage
 
