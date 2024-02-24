@@ -1,5 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
+import vimeo
+
 from content import Content
 import base64
 from playwright.sync_api import sync_playwright
@@ -7,24 +9,14 @@ from pathlib import Path
 import webvtt
 from dotenv import load_dotenv
 
+from moviepy.editor import *
+import speech_recognition as sr
 
 import os
 import json
 
 load_dotenv()
-
-# from requests_html import AsyncHTMLSession
-# import asyncio
-
-# from requests_html import HTMLSession
-
-# OAuth Redirect Authentication: https://api.vimeo.com/oauth/authorize
-# Access token URL: https://api.vimeo.com/oauth/access_token
-# token: e64ec5b8403d282a1c29f896ac958c96
-
-# [ ] make an IP call to check if titles in a video 
-
-# r = requests.get('https://vimeo.com/915051800/baf3fdcde5')  # replace '<URL>' with the URL of the webpage
+# 915051800/baf3fdcde5') 
 
 def with_token(token):
     def get_data(video_id):
@@ -75,38 +67,52 @@ def getToken(client_id, client_secret):
   return res['access_token']
 
 
-def getTextTrackUri(video_id):
-  headers = {
-    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 7_1_2 like Mac OS X) \
-        AppleWebKit/537.51.2 (KHTML, like Gecko) Version/7.0 Mobile/11D257 \
-        Safari/9537.53",
-    "Authorization": "bearer e64ec5b8403d282a1c29f896ac958c96",
-    "Accept": "application/vnd.vimeo.*+json;version=3.4"
-  }
-  link = 'https://api.vimeo.com/videos/{}'.format(video_id)
-  print('requesting ', link)
-  try:
-    req = requests.get(link, headers=headers)
-  except requests.exceptions.RequestException as e:
-    print(e)
-    return None
-  return req.text
+def mp4towav(mp4file, wavfile):
+    videoclip=VideoFileClip(mp4file)
+    audioclip=videoclip.audio
+    audioclip.write_audiofile(wavfile,codec='pcm_s16le')
+    audioclip.close()
+    videoclip.close()
 
-
-# Use '.html' method to parse the HTML
-# token = getToken("719a17658560fd1305db6f452897b8ad9661e228",
-#   "NUDOOuCpGE+eOqdXQfkrb1Ea4v5i3Yrhs3pqX0HH375GAX3gcVsoG0VkUXxcSUQej0zMQMzOCqxCA2iO8KYQo4lekMh49sqhzSzMulFMa/hfMyZiDDb/cpffPSkHq1e1"
-# )
-
-# if token:
-#   print(token)
-
-get_track = with_token(getToken(
+save_track = with_token(getToken(
   os.getenv('VIMEO_CLIENT_ID'),
   os.getenv('VIMEO_CLIENT_SECRET')
 ))
 
-print(get_track(915051800))
+target_quality = '360p'
+video_id = 355336541
+
+client = vimeo.VimeoClient(
+  token='VIMEO_ACCESS',
+  key='VIMEO_CLIENT_ID',
+  secret='VIMEO_CLIENT_SECRET'
+)
+
+response = client.get('https://player.vimeo.com/video/' + str(video_id) + '/config')
+
+files = response.json()['request']['files']['progressive']
+
+for file in files:
+  if file['quality'] == target_quality:
+    video_url = file['url']
+    video_name = str(video_id) + '_' + file['quality'] + '.mp4'
+    video_response = requests.get(video_url)
+
+    video_file = open(video_name, 'wb')
+    video_file.write(video_response.content)
+    video_file.close()
+
+    # print('downloaded: ' + video_name)
+    mp4towav(video_name,"audio.wav")
+
+r = sr.Recognizer()
+comments = sr.AudioFile('audio.wav')
+with comments as source:
+  audio = r.record(source)
+  text = r.recognize_google(audio)
+  print(text)
+
+
 
 def getTextfromVideo():
   #try load dynamic
@@ -116,14 +122,9 @@ def getTextfromVideo():
     browser = p.chromium.launch()
     context = browser.new_context()
     page = context.new_page()
-    # page.goto('http://pythonscraping.com/pages/javascript/redirectDemo1.html')
     page.goto('https://vimeo.com/915051800/baf3fdcde5')
-    # page.goto('https://vimeo.com/bestoftheyear')
-    # print(page.wait_for_load_state())
     page.wait_for_load_state()
     page.wait_for_timeout(8000)
-    # page.on("load", load_tracker)
-    # page.on('request', handle_request)
     page.wait_for_timeout(8000)
     
     html = page.content()

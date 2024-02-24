@@ -8,6 +8,8 @@ CWCmodel/data/
 data/
 *.cfg
 
+.env
+
 CWCmodel/structured/__pycache__/content.cpython-310.pyc
 CWCmodel/structured/__pycache__/website.cpython-310.pyc
 CWCmodel/pattern/__pycache__/website.cpython-310.pyc
